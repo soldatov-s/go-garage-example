@@ -1,13 +1,9 @@
 package testv1
 
 import (
-	// stdlib
 	"encoding/json"
 
-	// local
 	"github.com/soldatov-s/go-garage-example/models"
-
-	// other
 	"github.com/soldatov-s/go-garage/utils"
 )
 

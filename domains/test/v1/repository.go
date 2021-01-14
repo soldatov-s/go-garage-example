@@ -1,14 +1,10 @@
 package testv1
 
 import (
-	// stdlib
 	"errors"
 	"strings"
 
-	// local
 	"github.com/soldatov-s/go-garage-example/models"
-
-	// other
 	"github.com/soldatov-s/go-garage/utils"
 )
 
