@@ -12,11 +12,13 @@ Will be started:
 * postgresql
 * redis
 * rabbitmq
-* go-garage-example service
-Service applies postgresql migrations by self.
+* go-garage-example service  
+
+Service applies postgresql migrations by self.  
 After starting you can find swaggers:
 * http://localhost:9000/api/v1/swagger/index.html
 * http://localhost:9100/api/v1/swagger/index.html  
+
 Prometheus metrics http://localhost:9100/metrics  
 Alive http://localhost:9100/health/alive  
 Ready http://localhost:9100/health/ready  
