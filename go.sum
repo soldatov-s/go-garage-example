@@ -268,6 +268,8 @@ github.com/soldatov-s/go-garage v0.0.0-20210113162609-4956584f117c h1:p6mQiYSxwO
 github.com/soldatov-s/go-garage v0.0.0-20210113162609-4956584f117c/go.mod h1:ld37UbxqHMYjJtt8gE+o8gKc6rcy+v+B18p1CgRsE2w=
 github.com/soldatov-s/go-garage v0.0.0-20210113175655-b7111f14850e h1:4hW2AlN3kgX5QwWIf8KH5mlHdz8K9aaQFhcKtScddSg=
 github.com/soldatov-s/go-garage v0.0.0-20210113175655-b7111f14850e/go.mod h1:ld37UbxqHMYjJtt8gE+o8gKc6rcy+v+B18p1CgRsE2w=
+github.com/soldatov-s/go-garage v0.0.0-20210115145003-c12f9b287a5b h1:lZMBTZIVr84ocY8GzM4L5MuKxoPIBKM1yRNP7nmnJqs=
+github.com/soldatov-s/go-garage v0.0.0-20210115145003-c12f9b287a5b/go.mod h1:ld37UbxqHMYjJtt8gE+o8gKc6rcy+v+B18p1CgRsE2w=
 github.com/soldatov-s/go-garage v0.1.0 h1:4mqRwzaO6UyLlA4o7ElG4goMMVwle3TzkpJk+KfK084=
 github.com/soldatov-s/go-garage v0.1.0/go.mod h1:7cpouB59RTr0K54BdC+jZKygKyQWpo80ccS8hljBeao=
 github.com/soldatov-s/go-garage v0.11.1 h1:JxAQgn8jC2RndQN3iaCFYKMGOXkfE93/MeHocVFN1kU=
