@@ -58,7 +58,7 @@ func addMetrics(ctx context.Context) error {
 
 func initService() context.Context {
 	// Create context
-	ctx := context.Background()
+	ctx := app.CreateAppContext(context.Background())
 
 	// Set app info
 	ctx = meta.SetAppInfo(ctx, appName, builded, hash, version, description)
