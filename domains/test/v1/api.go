@@ -49,7 +49,7 @@ func (t *TestV1) testPostToCacheHandler(ec echo.Context) (err error) {
 		return echo.InternalServerError(ec, err)
 	}
 
-	if _, err := t.cache.Conn.Ping().Result(); err != nil {
+	if _, err := t.cache.Conn.Ping(t.ctx).Result(); err != nil {
 		log.Debug().Msgf("ping redis %s", err)
 	}
 
