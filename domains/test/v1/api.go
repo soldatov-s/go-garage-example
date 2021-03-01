@@ -1,153 +1,145 @@
 package testv1
 
 import (
-	"errors"
 	"net/http"
 	"reflect"
-	"strconv"
 
 	"github.com/soldatov-s/go-garage-example/models"
-
 	"github.com/soldatov-s/go-garage/providers/httpsrv"
 	"github.com/soldatov-s/go-garage/providers/httpsrv/echo"
-	echoSwagger "github.com/soldatov-s/go-swagger/echo-swagger"
 )
 
 func (t *TestV1) testPostToCacheHandler(ec echo.Context) (err error) {
 	// Swagger
-	if echoSwagger.IsBuildingSwagger(ec) {
-		err = errors.New("error")
-		echoSwagger.AddToSwagger(ec).
+	if ec.IsBuildingSwagger() {
+		ec.AddToSwagger().
 			SetProduces("application/json").
 			SetDescription("This handler put data to cache for requested ID").
 			SetSummary("Put data to cache by ID").
 			AddInPathParameter("id", "ID", reflect.Int).
 			AddResponse(http.StatusOK, "OK", httpsrv.OkResult()).
-			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.BadRequest(err)).
-			AddResponse(http.StatusNotFound, "NOT FOUND DATA", httpsrv.NotFound(err)).
-			AddResponse(http.StatusInternalServerError, "INTERNAL SERVER ERROR", httpsrv.InternalServerError(err))
+			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.ErrorAnsw{}).
+			AddResponse(http.StatusNotFound, "NOT FOUND DATA", httpsrv.ErrorAnsw{}).
+			AddResponse(http.StatusInternalServerError, "INTERNAL SERVER ERROR", httpsrv.ErrorAnsw{})
 
 		return nil
 	}
 
-	log := echo.GetLog(ec)
+	log := ec.GetLog()
 
-	ID, err := strconv.Atoi(ec.Param("id"))
+	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("BAD REQUEST, id %s", ec.Param("id"))
-		return echo.BadRequest(ec, err)
+		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
+		return ec.BadRequest(err)
 	}
 
 	data, err := t.GetTestByID(ID)
 	if err != nil {
-		log.Err(err).Msgf("BAD REQUEST, id %s", ec.Param("id"))
-		return echo.BadRequest(ec, err)
+		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
+		return ec.BadRequest(err)
 	}
 
 	if err := t.cache.Set(data.Code, data); err != nil {
-		log.Err(err).Msgf("INTERNAL SERVER ERROR, data %+v", data)
-		return echo.InternalServerError(ec, err)
+		log.Err(err).Msgf("internal server error, data %+v", data)
+		return ec.InternalServerError(err)
 	}
 
 	if _, err := t.cache.Conn.Ping(t.ctx).Result(); err != nil {
 		log.Debug().Msgf("ping redis %s", err)
 	}
 
-	return echo.OkResult(ec)
+	return ec.OkResult()
 }
 
 func (t *TestV1) testGetHandler(ec echo.Context) (err error) {
 	// Swagger
-	if echoSwagger.IsBuildingSwagger(ec) {
-		err = errors.New("error")
-		echoSwagger.AddToSwagger(ec).
+	if ec.IsBuildingSwagger() {
+		ec.AddToSwagger().
 			SetProduces("application/json").
 			SetDescription("This handler getting data for requested ID").
 			SetSummary("Get data by ID").
 			AddInPathParameter("id", "ID", reflect.Int).
 			AddResponse(http.StatusOK, "Data", TestDataResult{Body: models.Test{}}).
-			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.BadRequest(err)).
-			AddResponse(http.StatusNotFound, "NOT FOUND DATA", httpsrv.NotFound(err))
+			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.ErrorAnsw{}).
+			AddResponse(http.StatusNotFound, "NOT FOUND DATA", httpsrv.ErrorAnsw{})
 
 		return nil
 	}
 
-	log := echo.GetLog(ec)
+	log := ec.GetLog()
 
-	ID, err := strconv.Atoi(ec.Param("id"))
+	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("BAD REQUEST, id %s", ec.Param("id"))
-		return echo.BadRequest(ec, err)
+		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
+		return ec.BadRequest(err)
 	}
 
 	data, err := t.GetTestByID(ID)
 	if err != nil {
-		log.Err(err).Msgf("BAD REQUEST, id %s", ec.Param("id"))
-		return echo.BadRequest(ec, err)
+		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
+		return ec.BadRequest(err)
 	}
 
-	return echo.OK(ec, TestDataResult{Body: data})
+	return ec.OK(TestDataResult{Body: data})
 }
 
 func (t *TestV1) testPostHandler(ec echo.Context) (err error) {
 	// Swagger
-	if echoSwagger.IsBuildingSwagger(ec) {
-		err = errors.New("error")
-		echoSwagger.AddToSwagger(ec).
+	if ec.IsBuildingSwagger() {
+		ec.AddToSwagger().
 			SetProduces("application/json").
 			SetDescription("This handler create new data").
 			SetSummary("Create Data Handler").
 			AddInBodyParameter("data", "Data", models.Test{}, true).
 			AddResponse(http.StatusOK, "Data", &TestDataResult{Body: models.Test{}}).
-			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.BadRequest(err)).
-			AddResponse(http.StatusConflict, "CREATE DATA FAILED", httpsrv.CreateFailed(err))
+			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.ErrorAnsw{}).
+			AddResponse(http.StatusConflict, "CREATE DATA FAILED", httpsrv.ErrorAnsw{})
 
 		return nil
 	}
 
 	// Main code of handler
-	log := echo.GetLog(ec)
+	log := ec.GetLog()
 
 	var request models.Test
 
 	err = ec.Bind(&request)
 	if err != nil {
-		log.Err(err).Msg("BAD REQUEST")
-		return echo.BadRequest(ec, err)
+		log.Err(err).Msg("bad request")
+		return ec.BadRequest(err)
 	}
 
 	data, err := t.CreateTest(&request)
 	if err != nil {
-		log.Err(err).Msgf("CREATE DATA FAILED %+v", &request)
-		return echo.CreateFailed(ec, err)
+		log.Err(err).Msgf("create data failed %+v", &request)
+		return ec.CreateFailed(err)
 	}
 
-	return echo.OK(ec, TestDataResult{Body: data})
+	return ec.OK(TestDataResult{Body: data})
 }
 
 func (t *TestV1) testDeleteHandler(ec echo.Context) (err error) {
 	// Swagger
-	if echoSwagger.IsBuildingSwagger(ec) {
-		err = errors.New("error")
-		echoSwagger.AddToSwagger(ec).
+	if ec.IsBuildingSwagger() {
+		ec.AddToSwagger().
 			SetProduces("application/json").
 			SetDescription("This handler deletes data for requested ID").
 			SetSummary("Delete data by ID").
 			AddInPathParameter("id", "ID", reflect.Int).
-			AddInQueryParameter("hard", "Hard delete user, if equal true, delete hard", reflect.Bool, false).
+			AddInQueryParameter("hard", "Hard delete data, if equal true, delete hard", reflect.Bool, false).
 			AddResponse(http.StatusOK, "OK", httpsrv.OkResult()).
-			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.BadRequest(err)).
-			AddResponse(http.StatusNotFound, "NOT FOUND DATA", httpsrv.NotFound(err))
+			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.ErrorAnsw{}).
+			AddResponse(http.StatusNotFound, "NOT FOUND DATA", httpsrv.ErrorAnsw{})
 
 		return nil
 	}
 
-	log := echo.GetLog(ec)
+	log := ec.GetLog()
 
-	ID, err := strconv.Atoi(ec.Param("id"))
+	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("BAD REQUEST, id %s", ec.Param("id"))
-		return echo.BadRequest(ec, err)
+		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
+		return ec.BadRequest(err)
 	}
 
 	hard := ec.QueryParam("hard")
@@ -158,9 +150,9 @@ func (t *TestV1) testDeleteHandler(ec echo.Context) (err error) {
 	}
 
 	if err != nil {
-		log.Err(err).Msgf("BAD REQUEST, id %s", ec.Param("id"))
-		return echo.BadRequest(ec, err)
+		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
+		return ec.BadRequest(err)
 	}
 
-	return echo.OkResult(ec)
+	return ec.OkResult()
 }
