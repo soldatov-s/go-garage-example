@@ -19,7 +19,7 @@ BUILDTIME=$(shell TZ=UTC date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null)
 PACKAGE=$(CI_SERVER_HOST)/$(CI_PROJECT_NAMESPACE)/$(CI_PROJECT_NAME)
 ifeq ($(PACKAGE),//)
 	# PACKAGE name when build local
-	PACKAGE=$(shell go list -mod vendor 2>/dev/null)
+	PACKAGE=$(shell go mod vendor; go list -mod vendor 2>/dev/null)
 endif
 
 ifneq ($(PACKAGE),)
@@ -61,6 +61,7 @@ init-stable: ## Init stable version
 .PHONY: build-stable
 build-stable: ## Build stable version
 	@echo Build ${PACKAGE} ${GITVER} ${BUILDTIME} ${HASH}; \
+	go mod vendor; \
 	GO111MODULE=on go install -mod vendor -ldflags "\
 		-X '${PACKAGE}/internal/cmd.version=${GITVER}' \
 		-X '${PACKAGE}/internal/cmd.builded=${BUILDTIME}' \
