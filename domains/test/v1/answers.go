@@ -1,7 +1,7 @@
-package testv1
+package test
 
 import (
 	"github.com/soldatov-s/go-garage/providers/httpsrv"
 )
 
-type TestDataResult httpsrv.ResultAnsw
+type DataResult httpsrv.ResultAnsw

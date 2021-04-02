@@ -1,15 +1,31 @@
-package testv1
+package test
 
 import (
 	"net/http"
 	"reflect"
 
-	"github.com/soldatov-s/go-garage-example/models"
+	"github.com/pkg/errors"
 	"github.com/soldatov-s/go-garage/providers/httpsrv"
 	"github.com/soldatov-s/go-garage/providers/httpsrv/echo"
 )
 
-func (t *TestV1) testPostToCacheHandler(ec echo.Context) (err error) {
+type AppInterface interface {
+	PostToCacheHandler(ec echo.Context) error
+	GetHandler(ec echo.Context) error
+	PostHandler(ec echo.Context) error
+	DeleteHandler(ec echo.Context) error
+}
+
+type App struct {
+	repo  Repository
+	cache Cacher
+}
+
+func NewApp(repo Repository, cache Cacher) *App {
+	return &App{repo: repo, cache: cache}
+}
+
+func (a *App) PostToCacheHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
@@ -33,25 +49,25 @@ func (t *TestV1) testPostToCacheHandler(ec echo.Context) (err error) {
 		return ec.BadRequest(err)
 	}
 
-	data, err := t.GetTestByID(ID)
+	data, err := a.repo.GetByID(ID)
 	if err != nil {
 		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
 		return ec.BadRequest(err)
 	}
 
-	if err := t.cache.Set(data.Code, data); err != nil {
+	if err := a.cache.Set(data.Code, data); err != nil {
 		log.Err(err).Msgf("internal server error, data %+v", data)
 		return ec.InternalServerError(err)
 	}
 
-	if _, err := t.cache.Conn.Ping(t.ctx).Result(); err != nil {
+	if err := a.cache.Ping(); err != nil {
 		log.Debug().Msgf("ping redis %s", err)
 	}
 
 	return ec.OkResult()
 }
 
-func (t *TestV1) testGetHandler(ec echo.Context) (err error) {
+func (a *App) GetHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
@@ -59,7 +75,7 @@ func (t *TestV1) testGetHandler(ec echo.Context) (err error) {
 			SetDescription("This handler getting data for requested ID").
 			SetSummary("Get data by ID").
 			AddInPathParameter("id", "ID", reflect.Int).
-			AddResponse(http.StatusOK, "Data", TestDataResult{Body: models.Test{}}).
+			AddResponse(http.StatusOK, "Data", DataResult{Body: Enity{}}).
 			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.ErrorAnsw{}).
 			AddResponse(http.StatusNotFound, "NOT FOUND DATA", httpsrv.ErrorAnsw{})
 
@@ -74,24 +90,24 @@ func (t *TestV1) testGetHandler(ec echo.Context) (err error) {
 		return ec.BadRequest(err)
 	}
 
-	data, err := t.GetTestByID(ID)
+	data, err := a.repo.GetByID(ID)
 	if err != nil {
 		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
 		return ec.BadRequest(err)
 	}
 
-	return ec.OK(TestDataResult{Body: data})
+	return ec.OK(DataResult{Body: data})
 }
 
-func (t *TestV1) testPostHandler(ec echo.Context) (err error) {
+func (a *App) PostHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
 			SetProduces("application/json").
 			SetDescription("This handler create new data").
 			SetSummary("Create Data Handler").
-			AddInBodyParameter("data", "Data", models.Test{}, true).
-			AddResponse(http.StatusOK, "Data", &TestDataResult{Body: models.Test{}}).
+			AddInBodyParameter("data", "Data", Enity{}, true).
+			AddResponse(http.StatusOK, "Data", &DataResult{Body: Enity{}}).
 			AddResponse(http.StatusBadRequest, "BAD REQUEST", httpsrv.ErrorAnsw{}).
 			AddResponse(http.StatusConflict, "CREATE DATA FAILED", httpsrv.ErrorAnsw{})
 
@@ -101,24 +117,23 @@ func (t *TestV1) testPostHandler(ec echo.Context) (err error) {
 	// Main code of handler
 	log := ec.GetLog()
 
-	var request models.Test
+	request := &Enity{}
 
-	err = ec.Bind(&request)
-	if err != nil {
+	if err := ec.Bind(request); err != nil {
 		log.Err(err).Msg("bad request")
 		return ec.BadRequest(err)
 	}
 
-	data, err := t.CreateTest(&request)
+	data, err := a.repo.CreateTest(request)
 	if err != nil {
 		log.Err(err).Msgf("create data failed %+v", &request)
 		return ec.CreateFailed(err)
 	}
 
-	return ec.OK(TestDataResult{Body: data})
+	return ec.OK(DataResult{Body: data})
 }
 
-func (t *TestV1) testDeleteHandler(ec echo.Context) (err error) {
+func (a *App) DeleteHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
@@ -143,10 +158,13 @@ func (t *TestV1) testDeleteHandler(ec echo.Context) (err error) {
 	}
 
 	hard := ec.QueryParam("hard")
-	if hard == "true" {
-		err = t.HardDeleteTestByID(ID)
-	} else {
-		err = t.SoftDeleteTestByID(ID)
+	switch hard {
+	case "true":
+		err = a.repo.HardDeleteByID(ID)
+	case "false":
+		err = a.repo.SoftDeleteByID(ID)
+	default:
+		err = errors.New("unknown value for hard parameter")
 	}
 
 	if err != nil {

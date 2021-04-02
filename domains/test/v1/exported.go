@@ -1,16 +1,12 @@
-package testv1
+package test
 
 import (
 	"context"
 
-	"github.com/rs/zerolog"
-	"github.com/soldatov-s/go-garage-example/internal/cfg"
+	"github.com/pkg/errors"
 	"github.com/soldatov-s/go-garage/domains"
-	"github.com/soldatov-s/go-garage/providers/cache/redis"
-	"github.com/soldatov-s/go-garage/providers/db/pq"
 	"github.com/soldatov-s/go-garage/providers/httpsrv/echo"
 	"github.com/soldatov-s/go-garage/providers/logger"
-	"github.com/soldatov-s/go-garage/providers/msgs/rabbitmq"
 )
 
 const (
@@ -19,57 +15,65 @@ const (
 
 type empty struct{}
 
-type TestV1 struct {
-	log   zerolog.Logger
-	ctx   context.Context
-	db    *pq.Enity
-	cache *redis.Enity
-	msgs  *rabbitmq.Enity
+type Config struct {
+	DBName      string
+	CacheName   string
+	MsgsName    string
+	PublicHTTP  string
+	PrivateHTTP string
+	Version     string
 }
 
-func Registrate(ctx context.Context) (context.Context, error) {
-	t := &TestV1{
-		ctx: ctx,
-		log: logger.GetPackageLogger(ctx, empty{}),
-	}
+type Interface struct {
+	Repo  Repository
+	App   AppInterface
+	Mess  Messenger
+	Cache Cacher
+}
+
+func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
+	i := &Interface{}
 	var err error
-	if t.db, err = pq.GetEnityTypeCast(ctx, cfg.DBName); err != nil {
-		return nil, err
+	if i.Repo, err = NewRepository(ctx, &RepoConfig{DBName: cfg.DBName}); err != nil {
+		return nil, errors.Wrap(err, "create repository")
 	}
 
-	if t.cache, err = redis.GetEnityTypeCast(ctx, cfg.CacheName); err != nil {
-		return nil, err
+	if i.Cache, err = NewCache(ctx, cfg.CacheName); err != nil {
+		return nil, errors.Wrap(err, "create cache")
 	}
 
-	if t.msgs, err = rabbitmq.GetEnityTypeCast(ctx, cfg.MsgsName); err != nil {
-		return nil, err
+	if i.Mess, err = NewMess(ctx, cfg.MsgsName, i.Repo, i.Cache); err != nil {
+		return nil, errors.Wrap(err, "create messager")
 	}
 
-	publicV1, err := echo.GetAPIVersionGroup(ctx, cfg.PublicHTTP, cfg.V1)
+	i.App = NewApp(i.Repo, i.Cache)
+
+	publicV1, err := echo.GetAPIVersionGroup(ctx, cfg.PublicHTTP, cfg.Version)
 	if err != nil {
 		return nil, err
 	}
 
 	grPublic := publicV1.Group
-	grPublic.Use(echo.HydrationLogger(&t.log))
-	grPublic.POST("/test/:id", echo.Handler(t.testPostToCacheHandler))
+	log := logger.GetPackageLogger(ctx, empty{})
+	grPublic.Use(echo.HydrationLogger(&log))
+	grPublic.POST("/test/:id", echo.Handler(i.App.PostToCacheHandler))
 
-	privateV1, err := echo.GetAPIVersionGroup(ctx, cfg.PrivateHTTP, cfg.V1)
+	privateV1, err := echo.GetAPIVersionGroup(ctx, cfg.PrivateHTTP, cfg.Version)
 	if err != nil {
 		return nil, err
 	}
 
 	grProtect := privateV1.Group
-	grProtect.Use(echo.HydrationLogger(&t.log))
-	grProtect.GET("/test/:id", echo.Handler(t.testGetHandler))
-	grProtect.POST("/test", echo.Handler(t.testPostHandler))
-	grProtect.DELETE("/test/:id", echo.Handler(t.testDeleteHandler))
+	grProtect.Use(echo.HydrationLogger(&log))
+	grProtect.GET("/test/:id", echo.Handler(i.App.GetHandler))
+	grProtect.POST("/test", echo.Handler(i.App.PostHandler))
+	grProtect.DELETE("/test/:id", echo.Handler(i.App.DeleteHandler))
 
-	return domains.RegistrateByName(ctx, DomainName, t), nil
+	return domains.RegistrateByName(ctx, DomainName, i), nil
 }
 
-func Get(ctx context.Context) (*TestV1, error) {
-	if v, ok := domains.GetByName(ctx, DomainName).(*TestV1); ok {
+func Get(ctx context.Context) (*Interface, error) {
+	if v, ok := domains.GetByName(ctx, DomainName).(*Interface); ok {
 		return v, nil
 	}
 	return nil, domains.ErrInvalidDomainType

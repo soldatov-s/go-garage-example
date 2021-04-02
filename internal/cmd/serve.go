@@ -18,6 +18,7 @@ import (
 	"github.com/soldatov-s/go-garage/providers/msgs/rabbitmq"
 	"github.com/soldatov-s/go-garage/providers/stats"
 	"github.com/soldatov-s/go-garage/providers/stats/garage"
+	"github.com/soldatov-s/go-garage/x/sql"
 	"github.com/spf13/cobra"
 )
 
@@ -77,6 +78,9 @@ func initService() context.Context {
 
 	// Get logger for package
 	log := logger.GetPackageLogger(ctx, empty{})
+
+	// Init sql helper
+	ctx, _ = sql.Create(ctx)
 
 	a := meta.Get(ctx)
 	log.Info().Msgf("starting %s (%s)...", a.Name, a.GetBuildInfo())
@@ -156,7 +160,14 @@ func initDomains(ctx context.Context) context.Context {
 	log := logger.GetPackageLogger(ctx, empty{})
 
 	// Initilize domains
-	if ctx, err = testv1.Registrate(ctx); err != nil {
+	if ctx, err = testv1.Registrate(ctx, &testv1.Config{
+		DBName:      cfg.DBName,
+		CacheName:   cfg.CacheName,
+		MsgsName:    cfg.MsgsName,
+		PublicHTTP:  cfg.PublicHTTP,
+		PrivateHTTP: cfg.PrivateHTTP,
+		Version:     "1",
+	}); err != nil {
 		log.Fatal().Err(err).Msg("failed create domain testv1")
 	}
 
@@ -171,7 +182,7 @@ func initDomains(ctx context.Context) context.Context {
 	}
 
 	if err = rabbimqEnity.Subscribe(&rabbitmq.SubscribeOptions{
-		ConsumeHndl:  testV1.ConsumeHndl,
+		ConsumeHndl:  testV1.Mess.ConsumeHndl,
 		Shutdownhndl: nil,
 	}); err != nil {
 		log.Fatal().Err(err).Msg("failed start subscribe messaging")

@@ -118,6 +118,7 @@ github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/google/uuid v1.1.4 h1:0ecGp3skIrHWPNGPJDaBIghfA6Sp7Ruo2Io8eLKzWm0=
 github.com/google/uuid v1.1.4/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/gopcua/opcua v0.0.0-20201219213726-4f8488dd4b82/go.mod h1:a6QH4F9XeODklCmWuvaOdL8v9H0d73CEKUHWVZLQyE8=
 github.com/gorilla/mux v1.7.3/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
@@ -199,6 +200,7 @@ github.com/opencontainers/go-digest v1.0.0-rc1/go.mod h1:cMLVZDEM3+U2I4VmLI6N8jQ
 github.com/opencontainers/image-spec v1.0.1/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
 github.com/opencontainers/runc v0.1.1/go.mod h1:qT5XzbpPznkRYVz/mWwUaVBUv2rmF59PVA73FjuZG0U=
 github.com/ory/dockertest v3.3.5+incompatible/go.mod h1:1vX4m9wsvi00u5bseYwXaSnhNrne+V0E6LAcBILJdPs=
+github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pelletier/go-toml v1.7.0/go.mod h1:vwGMzjaWMwyfHwgIBhI2YUM4fB6nL6lVAvS1LBMMhTE=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
@@ -340,6 +342,8 @@ github.com/soldatov-s/go-garage v0.0.0-20210301112808-802fd11fb2e3 h1:/w1jnS0KmW
 github.com/soldatov-s/go-garage v0.0.0-20210301112808-802fd11fb2e3/go.mod h1:jhr+P5XZ+yeRX0sfjCODPKY3VuUCg0ALb/x3vudazYE=
 github.com/soldatov-s/go-garage v0.0.0-20210301113723-b5c411ba4aee h1:kPk3CE9exnPPCatwnBO9t70+5oOkbRH+tcn9vzf1fjI=
 github.com/soldatov-s/go-garage v0.0.0-20210301113723-b5c411ba4aee/go.mod h1:jhr+P5XZ+yeRX0sfjCODPKY3VuUCg0ALb/x3vudazYE=
+github.com/soldatov-s/go-garage v0.0.0-20210315134020-f0855e4b9c4e h1:3iJbPbDktGDhVZHHZQdMnKu6ciVyVXWYE1XgizWOsN8=
+github.com/soldatov-s/go-garage v0.0.0-20210315134020-f0855e4b9c4e/go.mod h1:LbgR7sDFGviXhHkW1YAh40YfdcB1XfK5CaXVnyJAyYE=
 github.com/soldatov-s/go-garage v0.1.0 h1:4mqRwzaO6UyLlA4o7ElG4goMMVwle3TzkpJk+KfK084=
 github.com/soldatov-s/go-garage v0.1.0/go.mod h1:7cpouB59RTr0K54BdC+jZKygKyQWpo80ccS8hljBeao=
 github.com/soldatov-s/go-garage v0.2.0 h1:iUexqbvbjznOIuwx3TsNmrTeg0+5TJPGIM0d0SnmncQ=
@@ -358,6 +362,8 @@ github.com/soldatov-s/go-swagger v1.0.0 h1:q2oTyUdJdeAyrOSZ9hpzbBtauq/YqicXWOcNr
 github.com/soldatov-s/go-swagger v1.0.0/go.mod h1:xXleu0BOWHIoFhsjS5UqwGDGvtqH1ygjnA0WA6p/1Kg=
 github.com/soldatov-s/go-swagger v1.1.0 h1:6cIuJWaoDXfAJ0a4RdGSjA4EX2V6XHZ14X43sf65Gwg=
 github.com/soldatov-s/go-swagger v1.1.0/go.mod h1:xXleu0BOWHIoFhsjS5UqwGDGvtqH1ygjnA0WA6p/1Kg=
+github.com/soldatov-s/go-swagger v1.2.0 h1:shuM3ikEFagHpPl3suelZ1YIBAWFk9YnoCd6goZJTBk=
+github.com/soldatov-s/go-swagger v1.2.0/go.mod h1:xXleu0BOWHIoFhsjS5UqwGDGvtqH1ygjnA0WA6p/1Kg=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/cast v1.3.0/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
