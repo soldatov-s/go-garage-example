@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	DomainName = "testv1"
+	domainName = "testv1"
 )
 
 type empty struct{}
@@ -31,7 +31,7 @@ type Interface struct {
 	Cache Cacher
 }
 
-func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
+func NewInterface(ctx context.Context, cfg *Config) (*Interface, error) {
 	i := &Interface{}
 	var err error
 	if i.Repo, err = NewRepository(ctx, &RepoConfig{DBName: cfg.DBName}); err != nil {
@@ -50,7 +50,7 @@ func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
 
 	publicV1, err := echo.GetAPIVersionGroup(ctx, cfg.PublicHTTP, cfg.Version)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get version group")
 	}
 
 	grPublic := publicV1.Group
@@ -60,7 +60,7 @@ func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
 
 	privateV1, err := echo.GetAPIVersionGroup(ctx, cfg.PrivateHTTP, cfg.Version)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get version group")
 	}
 
 	grProtect := privateV1.Group
@@ -69,11 +69,20 @@ func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
 	grProtect.POST("/test", echo.Handler(i.App.PostHandler))
 	grProtect.DELETE("/test/:id", echo.Handler(i.App.DeleteHandler))
 
-	return domains.RegistrateByName(ctx, DomainName, i), nil
+	return i, nil
+}
+
+func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
+	i, err := NewInterface(ctx, cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "create interface")
+	}
+
+	return domains.RegistrateByName(ctx, domainName, i), nil
 }
 
 func Get(ctx context.Context) (*Interface, error) {
-	if v, ok := domains.GetByName(ctx, DomainName).(*Interface); ok {
+	if v, ok := domains.GetByName(ctx, domainName).(*Interface); ok {
 		return v, nil
 	}
 	return nil, domains.ErrInvalidDomainType
