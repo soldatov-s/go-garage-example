@@ -12,7 +12,7 @@ import (
 )
 
 type Messenger interface {
-	ConsumeHndl(data []byte) error
+	rabbitmq.SubscribeOptions
 }
 
 type Mess struct {
@@ -35,7 +35,7 @@ func NewMess(ctx context.Context, msgsName string, repo Repository, cache Cacher
 	return m, nil
 }
 
-func (m *Mess) ConsumeHndl(data []byte) error {
+func (m *Mess) Consume(data []byte) error {
 	var request Consume
 	if err := json.Unmarshal(data, &request); err != nil {
 		return err
@@ -60,3 +60,5 @@ func (m *Mess) ConsumeHndl(data []byte) error {
 
 	return m.msgs.SendMessage(testPublish)
 }
+
+func (m *Mess) Shutdown() {}

@@ -9,23 +9,23 @@ import (
 	"github.com/soldatov-s/go-garage/providers/httpsrv/echo"
 )
 
-type AppInterface interface {
+type APIInterface interface {
 	PostToCacheHandler(ec echo.Context) error
 	GetHandler(ec echo.Context) error
 	PostHandler(ec echo.Context) error
 	DeleteHandler(ec echo.Context) error
 }
 
-type App struct {
+type API struct {
 	repo  Repository
 	cache Cacher
 }
 
-func NewApp(repo Repository, cache Cacher) *App {
-	return &App{repo: repo, cache: cache}
+func NewAPI(repo Repository, cache Cacher) *API {
+	return &API{repo: repo, cache: cache}
 }
 
-func (a *App) PostToCacheHandler(ec echo.Context) error {
+func (a *API) PostToCacheHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
@@ -67,7 +67,7 @@ func (a *App) PostToCacheHandler(ec echo.Context) error {
 	return ec.OkResult()
 }
 
-func (a *App) GetHandler(ec echo.Context) error {
+func (a *API) GetHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
@@ -99,7 +99,7 @@ func (a *App) GetHandler(ec echo.Context) error {
 	return ec.OK(DataResult{Body: data})
 }
 
-func (a *App) PostHandler(ec echo.Context) error {
+func (a *API) PostHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
@@ -133,7 +133,7 @@ func (a *App) PostHandler(ec echo.Context) error {
 	return ec.OK(DataResult{Body: data})
 }
 
-func (a *App) DeleteHandler(ec echo.Context) error {
+func (a *API) DeleteHandler(ec echo.Context) error {
 	// Swagger
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().

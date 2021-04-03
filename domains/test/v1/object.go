@@ -13,8 +13,6 @@ const (
 	domainName = "testv1"
 )
 
-type empty struct{}
-
 type Config struct {
 	DBName      string
 	CacheName   string
@@ -24,29 +22,29 @@ type Config struct {
 	Version     string
 }
 
-type Interface struct {
+type Object struct {
 	Repo  Repository
-	App   AppInterface
+	API   APIInterface
 	Mess  Messenger
 	Cache Cacher
 }
 
-func NewInterface(ctx context.Context, cfg *Config) (*Interface, error) {
-	i := &Interface{}
+func NewObject(ctx context.Context, cfg *Config) (*Object, error) {
+	o := &Object{}
 	var err error
-	if i.Repo, err = NewRepository(ctx, &RepoConfig{DBName: cfg.DBName}); err != nil {
+	if o.Repo, err = NewRepository(ctx, cfg.DBName); err != nil {
 		return nil, errors.Wrap(err, "create repository")
 	}
 
-	if i.Cache, err = NewCache(ctx, cfg.CacheName); err != nil {
+	if o.Cache, err = NewCache(ctx, cfg.CacheName); err != nil {
 		return nil, errors.Wrap(err, "create cache")
 	}
 
-	if i.Mess, err = NewMess(ctx, cfg.MsgsName, i.Repo, i.Cache); err != nil {
+	if o.Mess, err = NewMess(ctx, cfg.MsgsName, o.Repo, o.Cache); err != nil {
 		return nil, errors.Wrap(err, "create messager")
 	}
 
-	i.App = NewApp(i.Repo, i.Cache)
+	o.API = NewAPI(o.Repo, o.Cache)
 
 	publicV1, err := echo.GetAPIVersionGroup(ctx, cfg.PublicHTTP, cfg.Version)
 	if err != nil {
@@ -56,7 +54,7 @@ func NewInterface(ctx context.Context, cfg *Config) (*Interface, error) {
 	grPublic := publicV1.Group
 	log := logger.GetPackageLogger(ctx, empty{})
 	grPublic.Use(echo.HydrationLogger(&log))
-	grPublic.POST("/test/:id", echo.Handler(i.App.PostToCacheHandler))
+	grPublic.POST("/test/:id", echo.Handler(o.API.PostToCacheHandler))
 
 	privateV1, err := echo.GetAPIVersionGroup(ctx, cfg.PrivateHTTP, cfg.Version)
 	if err != nil {
@@ -65,15 +63,15 @@ func NewInterface(ctx context.Context, cfg *Config) (*Interface, error) {
 
 	grProtect := privateV1.Group
 	grProtect.Use(echo.HydrationLogger(&log))
-	grProtect.GET("/test/:id", echo.Handler(i.App.GetHandler))
-	grProtect.POST("/test", echo.Handler(i.App.PostHandler))
-	grProtect.DELETE("/test/:id", echo.Handler(i.App.DeleteHandler))
+	grProtect.GET("/test/:id", echo.Handler(o.API.GetHandler))
+	grProtect.POST("/test", echo.Handler(o.API.PostHandler))
+	grProtect.DELETE("/test/:id", echo.Handler(o.API.DeleteHandler))
 
-	return i, nil
+	return o, nil
 }
 
 func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
-	i, err := NewInterface(ctx, cfg)
+	i, err := NewObject(ctx, cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "create interface")
 	}
@@ -81,8 +79,8 @@ func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
 	return domains.RegistrateByName(ctx, domainName, i), nil
 }
 
-func Get(ctx context.Context) (*Interface, error) {
-	if v, ok := domains.GetByName(ctx, domainName).(*Interface); ok {
+func Get(ctx context.Context) (*Object, error) {
+	if v, ok := domains.GetByName(ctx, domainName).(*Object); ok {
 		return v, nil
 	}
 	return nil, domains.ErrInvalidDomainType

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	testv1 "github.com/soldatov-s/go-garage-example/domains/test/v1"
 	"github.com/soldatov-s/go-garage-example/internal/cfg"
@@ -27,14 +28,14 @@ type empty struct{}
 func addMetrics(ctx context.Context) error {
 	s, err := garage.GetEnityTypeCast(ctx, cfg.StatsName)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "get stat enity")
 	}
 
 	if err := s.RegisterReadyCheck("TEST",
 		func() (bool, string) {
 			return true, "test error"
 		}); err != nil {
-		return err
+		return errors.Wrap(err, "registrate ready check")
 	}
 
 	metricOptions := &stats.MetricOptions{
@@ -51,7 +52,7 @@ func addMetrics(ctx context.Context) error {
 	if err := s.RegisterMetric(
 		"test",
 		metricOptions); err != nil {
-		return err
+		return errors.Wrap(err, "registarte metric")
 	}
 
 	return nil
@@ -181,10 +182,7 @@ func initDomains(ctx context.Context) context.Context {
 		log.Fatal().Err(err).Msg("failed to get testv1 domain")
 	}
 
-	if err = rabbimqEnity.Subscribe(&rabbitmq.SubscribeOptions{
-		ConsumeHndl:  testV1.Mess.ConsumeHndl,
-		Shutdownhndl: nil,
-	}); err != nil {
+	if err = rabbimqEnity.Subscribe(testV1.Mess); err != nil {
 		log.Fatal().Err(err).Msg("failed start subscribe messaging")
 	}
 

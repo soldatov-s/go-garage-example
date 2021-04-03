@@ -22,20 +22,16 @@ type Repository interface {
 
 const productionTestTable = "production.test"
 
-type RepoConfig struct {
-	DBName string
-}
-
 type Repo struct {
 	db  *pq.Enity
-	ctx context.Context
+	h   *sql.Helper
 	log zerolog.Logger
 }
 
-func NewRepository(ctx context.Context, cfg *RepoConfig) (*Repo, error) {
-	r := &Repo{}
+func NewRepository(ctx context.Context, dbName string) (*Repo, error) {
+	r := &Repo{h: &sql.Helper{}}
 	var err error
-	if r.db, err = pq.GetEnityTypeCast(ctx, cfg.DBName); err != nil {
+	if r.db, err = pq.GetEnityTypeCast(ctx, dbName); err != nil {
 		return nil, errors.Wrap(err, "failed to get pq enity")
 	}
 
@@ -47,7 +43,7 @@ func NewRepository(ctx context.Context, cfg *RepoConfig) (*Repo, error) {
 func (r *Repo) GetByID(id int64) (*Enity, error) {
 	data := &Enity{}
 
-	if err := sql.SelectByID(r.db.Conn, productionTestTable, id, data); err != nil {
+	if err := r.h.SelectByID(r.db.Conn, productionTestTable, id, data); err != nil {
 		return nil, errors.Wrap(err, "select by id")
 	}
 
@@ -73,14 +69,14 @@ func (r *Repo) GetByCode(code string) (*Enity, error) {
 }
 
 func (r *Repo) HardDeleteByID(id int64) error {
-	if err := sql.HardDeleteByID(r.db.Conn, productionTestTable, id); err != nil {
+	if err := r.h.HardDeleteByID(r.db.Conn, productionTestTable, id); err != nil {
 		return errors.Wrap(err, "hard delete by id")
 	}
 	return nil
 }
 
 func (r *Repo) SoftDeleteByID(id int64) error {
-	if err := sql.SoftDeleteByID(r.db.Conn, productionTestTable, id); err != nil {
+	if err := r.h.SoftDeleteByID(r.db.Conn, productionTestTable, id); err != nil {
 		return errors.Wrap(err, "soft delete by id")
 	}
 	return nil
@@ -89,11 +85,7 @@ func (r *Repo) SoftDeleteByID(id int64) error {
 func (r *Repo) CreateTest(data *Enity) (*Enity, error) {
 	data.CreateTimestamp()
 
-	if r.ctx == nil {
-		r.ctx, _ = sql.Create(context.Background())
-	}
-
-	result, err := sql.InsertInto(r.ctx, r.db.Conn, productionTestTable, data)
+	result, err := r.h.InsertInto(r.db.Conn, productionTestTable, data)
 	if err != nil {
 		return nil, errors.Wrap(err, "insert into")
 	}
