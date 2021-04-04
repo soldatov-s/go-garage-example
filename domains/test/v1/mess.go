@@ -1,12 +1,9 @@
 package test
 
 import (
-	"context"
 	"encoding/json"
 
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/soldatov-s/go-garage/providers/logger"
 	"github.com/soldatov-s/go-garage/providers/msgs/rabbitmq"
 	"github.com/soldatov-s/go-garage/utils"
 )
@@ -19,20 +16,18 @@ type Mess struct {
 	repo  Repository
 	cache Cacher
 	msgs  *rabbitmq.Enity
-	log   zerolog.Logger
+	log   *zerolog.Logger
 }
 
-func NewMess(ctx context.Context, msgsName string, repo Repository, cache Cacher) (*Mess, error) {
-	m := &Mess{repo: repo, cache: cache}
+var _ Messenger = new(Mess)
 
-	var err error
-	if m.msgs, err = rabbitmq.GetEnityTypeCast(ctx, msgsName); err != nil {
-		return nil, errors.Wrap(err, "failed to get rabbitmq enity")
+func NewMess(log *zerolog.Logger, msgs *rabbitmq.Enity, repo Repository, cache Cacher) *Mess {
+	return &Mess{
+		repo:  repo,
+		cache: cache,
+		log:   log,
+		msgs:  msgs,
 	}
-
-	m.log = logger.GetPackageLogger(ctx, empty{})
-
-	return m, nil
 }
 
 func (m *Mess) Consume(data []byte) error {

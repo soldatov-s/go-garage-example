@@ -5,11 +5,13 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/soldatov-s/go-garage/providers/httpsrv"
 	"github.com/soldatov-s/go-garage/providers/httpsrv/echo"
 )
 
 type APIInterface interface {
+	SetRoutes(log *zerolog.Logger, publicHTTP, privateHTTP *echo.Enity, version string) error
 	PostToCacheHandler(ec echo.Context) error
 	GetHandler(ec echo.Context) error
 	PostHandler(ec echo.Context) error
@@ -21,8 +23,32 @@ type API struct {
 	cache Cacher
 }
 
+var _ APIInterface = new(API)
+
 func NewAPI(repo Repository, cache Cacher) *API {
 	return &API{repo: repo, cache: cache}
+}
+
+func (a *API) SetRoutes(log *zerolog.Logger, publicHTTP, privateHTTP *echo.Enity, version string) error {
+	publicV1, err := publicHTTP.GetAPIVersionGroup(version)
+	if err != nil {
+		return errors.Wrap(err, "get version group")
+	}
+
+	publicV1.Group.Use(echo.HydrationLogger(log))
+	publicV1.Group.POST("/test/:id", echo.Handler(a.PostToCacheHandler))
+
+	privateV1, err := privateHTTP.GetAPIVersionGroup(version)
+	if err != nil {
+		return errors.Wrap(err, "get version group")
+	}
+
+	privateV1.Group.Use(echo.HydrationLogger(log))
+	privateV1.Group.GET("/test/:id", echo.Handler(a.GetHandler))
+	privateV1.Group.POST("/test", echo.Handler(a.PostHandler))
+	privateV1.Group.DELETE("/test/:id", echo.Handler(a.DeleteHandler))
+
+	return nil
 }
 
 func (a *API) PostToCacheHandler(ec echo.Context) error {
@@ -45,26 +71,31 @@ func (a *API) PostToCacheHandler(ec echo.Context) error {
 
 	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
-		return ec.BadRequest(err)
+		log.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
+		return ec.BadRequest(errors.Wrap(err, "failed to convert id"))
 	}
 
 	data, err := a.repo.GetByID(ID)
 	if err != nil {
-		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
-		return ec.BadRequest(err)
+		log.Err(err).Msgf("failed to get data by id %q", ec.Param("id"))
+		return ec.BadRequest(errors.Wrap(err, "failed to get data by id"))
 	}
 
 	if err := a.cache.Set(data.Code, data); err != nil {
-		log.Err(err).Msgf("internal server error, data %+v", data)
-		return ec.InternalServerError(err)
+		log.Err(err).Msgf("failed to save to cache, data %+v", data)
+		return ec.InternalServerError(errors.Wrap(err, "failed to save to cache"))
 	}
 
 	if err := a.cache.Ping(); err != nil {
 		log.Debug().Msgf("ping redis %s", err)
 	}
 
-	return ec.OkResult()
+	if err := ec.OkResult(); err != nil {
+		log.Err(err).Msg("failed to write answer")
+		return ec.InternalServerError(errors.Wrap(err, "failed to write answer"))
+	}
+
+	return nil
 }
 
 func (a *API) GetHandler(ec echo.Context) error {
@@ -86,17 +117,22 @@ func (a *API) GetHandler(ec echo.Context) error {
 
 	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
-		return ec.BadRequest(err)
+		log.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
+		return ec.BadRequest(errors.Wrap(err, "failed to convert id"))
 	}
 
 	data, err := a.repo.GetByID(ID)
 	if err != nil {
-		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
-		return ec.BadRequest(err)
+		log.Err(err).Msgf("failed to get data by id %q", ec.Param("id"))
+		return ec.BadRequest(errors.Wrap(err, "failed to get data"))
 	}
 
-	return ec.OK(DataResult{Body: data})
+	if err := ec.OK(DataResult{Body: data}); err != nil {
+		log.Err(err).Msg("failed to write answer")
+		return ec.InternalServerError(errors.Wrap(err, "failed to write answer"))
+	}
+
+	return nil
 }
 
 func (a *API) PostHandler(ec echo.Context) error {
@@ -120,14 +156,14 @@ func (a *API) PostHandler(ec echo.Context) error {
 	request := &Enity{}
 
 	if err := ec.Bind(request); err != nil {
-		log.Err(err).Msg("bad request")
-		return ec.BadRequest(err)
+		log.Err(err).Msg("failed to bind body")
+		return ec.BadRequest(errors.Wrap(err, "failed to bind body"))
 	}
 
 	data, err := a.repo.CreateTest(request)
 	if err != nil {
-		log.Err(err).Msgf("create data failed %+v", &request)
-		return ec.CreateFailed(err)
+		log.Err(err).Msgf("failed create data %+v", &request)
+		return ec.CreateFailed(errors.Wrap(err, "failed create data"))
 	}
 
 	return ec.OK(DataResult{Body: data})
@@ -153,8 +189,8 @@ func (a *API) DeleteHandler(ec echo.Context) error {
 
 	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
-		return ec.BadRequest(err)
+		log.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
+		return ec.BadRequest(errors.Wrap(err, "failed to convert id"))
 	}
 
 	hard := ec.QueryParam("hard")
@@ -168,9 +204,14 @@ func (a *API) DeleteHandler(ec echo.Context) error {
 	}
 
 	if err != nil {
-		log.Err(err).Msgf("bad request, id %s", ec.Param("id"))
-		return ec.BadRequest(err)
+		log.Err(err).Msgf("failed to delete by id %q", ec.Param("id"))
+		return ec.BadRequest(errors.Wrap(err, "failed to delete"))
 	}
 
-	return ec.OkResult()
+	if err := ec.OkResult(); err != nil {
+		log.Err(err).Msg("failed to write answer")
+		return ec.InternalServerError(errors.Wrap(err, "failed to write answer"))
+	}
+
+	return nil
 }

@@ -19,10 +19,10 @@ import (
 	"github.com/soldatov-s/go-garage/providers/msgs/rabbitmq"
 	"github.com/soldatov-s/go-garage/providers/stats"
 	"github.com/soldatov-s/go-garage/providers/stats/garage"
-	"github.com/soldatov-s/go-garage/x/sql"
 	"github.com/spf13/cobra"
 )
 
+// Private type, used for configure logger
 type empty struct{}
 
 func addMetrics(ctx context.Context) error {
@@ -68,7 +68,7 @@ func initService() context.Context {
 	// Load and parse config
 	ctx, err := envconfig.RegistrateAndParse(ctx, cfg.NewConfig())
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("parsing config:", err)
 		os.Exit(1)
 	}
 	fmt.Println("configuration parsed successfully")
@@ -79,9 +79,6 @@ func initService() context.Context {
 
 	// Get logger for package
 	log := logger.GetPackageLogger(ctx, empty{})
-
-	// Init sql helper
-	ctx, _ = sql.Create(ctx)
 
 	a := meta.Get(ctx)
 	log.Info().Msgf("starting %s (%s)...", a.Name, a.GetBuildInfo())
@@ -108,7 +105,7 @@ func initProviders(ctx context.Context) context.Context {
 
 	ctx, err = rabbitmq.RegistrateEnity(ctx, cfg.MsgsName, c.RabbitMQ)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed create msgs connection")
+		log.Fatal().Err(err).Msg("failed to create msgs connection")
 	}
 
 	// Public HTTP
@@ -169,9 +166,10 @@ func initDomains(ctx context.Context) context.Context {
 		PrivateHTTP: cfg.PrivateHTTP,
 		Version:     "1",
 	}); err != nil {
-		log.Fatal().Err(err).Msg("failed create domain testv1")
+		log.Fatal().Err(err).Msg("failed to create domain testv1")
 	}
 
+	// Subscribe domain to rabbitmq
 	rabbimqEnity, err := rabbitmq.GetEnityTypeCast(ctx, cfg.MsgsName)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to get msgs enity")
@@ -182,8 +180,8 @@ func initDomains(ctx context.Context) context.Context {
 		log.Fatal().Err(err).Msg("failed to get testv1 domain")
 	}
 
-	if err = rabbimqEnity.Subscribe(testV1.Mess); err != nil {
-		log.Fatal().Err(err).Msg("failed start subscribe messaging")
+	if err = rabbimqEnity.Subscribe(testV1.GetMess()); err != nil {
+		log.Fatal().Err(err).Msg("failed to subscribe messaging")
 	}
 
 	return ctx

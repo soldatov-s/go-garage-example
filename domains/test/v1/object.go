@@ -5,8 +5,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/soldatov-s/go-garage/domains"
+	"github.com/soldatov-s/go-garage/providers/cache/redis"
+	"github.com/soldatov-s/go-garage/providers/db/pq"
 	"github.com/soldatov-s/go-garage/providers/httpsrv/echo"
 	"github.com/soldatov-s/go-garage/providers/logger"
+	"github.com/soldatov-s/go-garage/providers/msgs/rabbitmq"
 )
 
 const (
@@ -22,65 +25,94 @@ type Config struct {
 	Version     string
 }
 
-type Object struct {
-	Repo  Repository
-	API   APIInterface
-	Mess  Messenger
-	Cache Cacher
+type ObjectInterface interface {
+	GetRepo() Repository
+	GetAPI() APIInterface
+	GetMess() Messenger
+	GetCache() Cacher
 }
+
+type Object struct {
+	repo  Repository
+	api   APIInterface
+	mess  Messenger
+	cache Cacher
+}
+
+var _ ObjectInterface = new(Object)
+
+// Private type, used for configure logger
+type empty struct{}
 
 func NewObject(ctx context.Context, cfg *Config) (*Object, error) {
 	o := &Object{}
-	var err error
-	if o.Repo, err = NewRepository(ctx, cfg.DBName); err != nil {
-		return nil, errors.Wrap(err, "create repository")
-	}
 
-	if o.Cache, err = NewCache(ctx, cfg.CacheName); err != nil {
-		return nil, errors.Wrap(err, "create cache")
-	}
-
-	if o.Mess, err = NewMess(ctx, cfg.MsgsName, o.Repo, o.Cache); err != nil {
-		return nil, errors.Wrap(err, "create messager")
-	}
-
-	o.API = NewAPI(o.Repo, o.Cache)
-
-	publicV1, err := echo.GetAPIVersionGroup(ctx, cfg.PublicHTTP, cfg.Version)
-	if err != nil {
-		return nil, errors.Wrap(err, "get version group")
-	}
-
-	grPublic := publicV1.Group
 	log := logger.GetPackageLogger(ctx, empty{})
-	grPublic.Use(echo.HydrationLogger(&log))
-	grPublic.POST("/test/:id", echo.Handler(o.API.PostToCacheHandler))
 
-	privateV1, err := echo.GetAPIVersionGroup(ctx, cfg.PrivateHTTP, cfg.Version)
-	if err != nil {
-		return nil, errors.Wrap(err, "get version group")
+	if enity, err := pq.GetEnityTypeCast(ctx, cfg.DBName); err == nil {
+		o.repo = NewRepo(&log, enity)
+	} else {
+		return nil, errors.Wrap(err, "failed to get pq enity")
 	}
 
-	grProtect := privateV1.Group
-	grProtect.Use(echo.HydrationLogger(&log))
-	grProtect.GET("/test/:id", echo.Handler(o.API.GetHandler))
-	grProtect.POST("/test", echo.Handler(o.API.PostHandler))
-	grProtect.DELETE("/test/:id", echo.Handler(o.API.DeleteHandler))
+	if enity, err := redis.GetEnityTypeCast(ctx, cfg.CacheName); err == nil {
+		o.cache = NewCache(&log, enity)
+	} else {
+		return nil, errors.Wrap(err, "failed to get redis enity")
+	}
+
+	if enity, err := rabbitmq.GetEnityTypeCast(ctx, cfg.MsgsName); err == nil {
+		o.mess = NewMess(&log, enity, o.repo, o.cache)
+	} else {
+		return nil, errors.Wrap(err, "failed to get rabbitmq enity")
+	}
+
+	o.api = NewAPI(o.repo, o.cache)
+
+	publicHTTP, err := echo.GetEnityTypeCast(ctx, cfg.PublicHTTP)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get public http enity")
+	}
+
+	privateHTTP, err := echo.GetEnityTypeCast(ctx, cfg.PrivateHTTP)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get private http enity")
+	}
+
+	if err := o.api.SetRoutes(&log, publicHTTP, privateHTTP, cfg.Version); err != nil {
+		return nil, errors.Wrap(err, "set routes")
+	}
 
 	return o, nil
 }
 
+func (o *Object) GetRepo() Repository {
+	return o.repo
+}
+
+func (o *Object) GetCache() Cacher {
+	return o.cache
+}
+
+func (o *Object) GetAPI() APIInterface {
+	return o.api
+}
+
+func (o *Object) GetMess() Messenger {
+	return o.mess
+}
+
 func Registrate(ctx context.Context, cfg *Config) (context.Context, error) {
-	i, err := NewObject(ctx, cfg)
+	o, err := NewObject(ctx, cfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "create interface")
 	}
 
-	return domains.RegistrateByName(ctx, domainName, i), nil
+	return domains.RegistrateByName(ctx, domainName, ObjectInterface(o)), nil
 }
 
-func Get(ctx context.Context) (*Object, error) {
-	if v, ok := domains.GetByName(ctx, domainName).(*Object); ok {
+func Get(ctx context.Context) (ObjectInterface, error) {
+	if v, ok := domains.GetByName(ctx, domainName).(ObjectInterface); ok {
 		return v, nil
 	}
 	return nil, domains.ErrInvalidDomainType

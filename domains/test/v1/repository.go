@@ -1,13 +1,10 @@
 package test
 
 import (
-	"context"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/soldatov-s/go-garage/providers/db"
 	"github.com/soldatov-s/go-garage/providers/db/pq"
-	"github.com/soldatov-s/go-garage/providers/logger"
 	"github.com/soldatov-s/go-garage/utils"
 	"github.com/soldatov-s/go-garage/x/sql"
 )
@@ -25,19 +22,17 @@ const productionTestTable = "production.test"
 type Repo struct {
 	db  *pq.Enity
 	h   *sql.Helper
-	log zerolog.Logger
+	log *zerolog.Logger
 }
 
-func NewRepository(ctx context.Context, dbName string) (*Repo, error) {
-	r := &Repo{h: &sql.Helper{}}
-	var err error
-	if r.db, err = pq.GetEnityTypeCast(ctx, dbName); err != nil {
-		return nil, errors.Wrap(err, "failed to get pq enity")
+var _ Repository = new(Repo)
+
+func NewRepo(log *zerolog.Logger, db *pq.Enity) *Repo {
+	return &Repo{
+		h:   &sql.Helper{},
+		log: log,
+		db:  db,
 	}
-
-	r.log = logger.GetPackageLogger(ctx, empty{})
-
-	return r, nil
 }
 
 func (r *Repo) GetByID(id int64) (*Enity, error) {

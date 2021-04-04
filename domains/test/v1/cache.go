@@ -6,7 +6,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/soldatov-s/go-garage/providers/cache/redis"
-	"github.com/soldatov-s/go-garage/providers/logger"
 )
 
 type Cacher interface {
@@ -17,20 +16,16 @@ type Cacher interface {
 
 type Cache struct {
 	cache *redis.Enity
-	log   zerolog.Logger
+	log   *zerolog.Logger
 }
 
-func NewCache(ctx context.Context, cacheName string) (*Cache, error) {
-	c := &Cache{}
+var _ Cacher = new(Cache)
 
-	var err error
-	if c.cache, err = redis.GetEnityTypeCast(ctx, cacheName); err != nil {
-		return nil, errors.Wrap(err, "failed to get redis enity")
+func NewCache(log *zerolog.Logger, cache *redis.Enity) *Cache {
+	return &Cache{
+		log:   log,
+		cache: cache,
 	}
-
-	c.log = logger.GetPackageLogger(ctx, empty{})
-
-	return c, nil
 }
 
 func (c *Cache) Get(key string, value *string) error {
