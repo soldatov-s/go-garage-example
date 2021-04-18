@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"os"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/zerolog/log"
 	testv1 "github.com/soldatov-s/go-garage-example/domains/test/v1"
 	"github.com/soldatov-s/go-garage-example/internal/cfg"
 	"github.com/soldatov-s/go-garage/app"
@@ -23,7 +22,7 @@ import (
 )
 
 // Private type, used for configure logger
-type empty struct{}
+type Empty struct{}
 
 func addMetrics(ctx context.Context) error {
 	s, err := garage.GetEnityTypeCast(ctx, cfg.StatsName)
@@ -68,21 +67,20 @@ func initService() context.Context {
 	// Load and parse config
 	ctx, err := envconfig.RegistrateAndParse(ctx, cfg.NewConfig())
 	if err != nil {
-		fmt.Println("parsing config:", err)
-		os.Exit(1)
+		log.Fatal().Err(err).Msg("failed to parsing config")
 	}
-	fmt.Println("configuration parsed successfully")
+	log.Info().Msg("configuration parsed successfully")
 	c := cfg.Get(ctx)
 
 	// Registrate logger
 	ctx = logger.RegistrateAndInitilize(ctx, c.Logger)
 
 	// Get logger for package
-	log := logger.GetPackageLogger(ctx, empty{})
+	packageLogger := logger.GetPackageLogger(ctx, Empty{})
 
 	a := meta.Get(ctx)
-	log.Info().Msgf("starting %s (%s)...", a.Name, a.GetBuildInfo())
-	log.Info().Msg(a.Description)
+	packageLogger.Info().Msgf("starting %s (%s)...", a.Name, a.GetBuildInfo())
+	packageLogger.Info().Msg(a.Description)
 
 	return ctx
 }
@@ -90,64 +88,64 @@ func initService() context.Context {
 func initProviders(ctx context.Context) context.Context {
 	var err error
 	c := cfg.Get(ctx)
-	log := logger.GetPackageLogger(ctx, empty{})
+	packageLogger := logger.GetPackageLogger(ctx, Empty{})
 
 	// Initialize providers
 	ctx, err = pq.RegistrateEnity(ctx, cfg.DBName, c.DB)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed create db connection")
+		packageLogger.Fatal().Err(err).Msg("failed create db connection")
 	}
 
 	ctx, err = redis.RegistrateEnity(ctx, cfg.CacheName, c.Redis)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed create cache connection")
+		packageLogger.Fatal().Err(err).Msg("failed create cache connection")
 	}
 
 	ctx, err = rabbitmq.RegistrateEnity(ctx, cfg.MsgsName, c.RabbitMQ)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create msgs connection")
+		packageLogger.Fatal().Err(err).Msg("failed to create msgs connection")
 	}
 
 	// Public HTTP
 	ctx, err = echo.RegistrateEnity(ctx, cfg.PublicHTTP, c.PublicHTTP)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to registrate http")
+		packageLogger.Fatal().Err(err).Msg("failed to registrate http")
 	}
 
 	publicEchoEnity, err := echo.GetEnityTypeCast(ctx, cfg.PublicHTTP)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get http")
+		packageLogger.Fatal().Err(err).Msg("failed to get http")
 	}
 
 	publicEchoEnity.Server.Use(echo.CORSDefault(), echo.HydrationRequestID())
 
 	if err = publicEchoEnity.CreateAPIVersionGroup(cfg.V1); err != nil {
-		log.Fatal().Err(err).Msg("failed to create api group")
+		packageLogger.Fatal().Err(err).Msg("failed to create api group")
 	}
 
 	// Private HTTP
 	ctx, err = echo.RegistrateEnity(ctx, cfg.PrivateHTTP, c.PrivateHTTP)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to registrate http")
+		packageLogger.Fatal().Err(err).Msg("failed to registrate http")
 	}
 
 	privateEchoEnity, err := echo.GetEnityTypeCast(ctx, cfg.PrivateHTTP)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get http")
+		packageLogger.Fatal().Err(err).Msg("failed to get http")
 	}
 
 	privateEchoEnity.Server.Use(echo.CORSDefault(), echo.HydrationRequestID())
 
 	if err = privateEchoEnity.CreateAPIVersionGroup(cfg.V1); err != nil {
-		log.Fatal().Err(err).Msg("failed to create api group")
+		packageLogger.Fatal().Err(err).Msg("failed to create api group")
 	}
 
 	if ctx, err = garage.RegistrateEnity(ctx, cfg.StatsName, c.Stats); err != nil {
-		log.Fatal().Err(err).Msg("failed to registrate stats")
+		packageLogger.Fatal().Err(err).Msg("failed to registrate stats")
 	}
 
 	if err = addMetrics(ctx); err != nil {
-		log.Fatal().Err(err).Msg("failed to registrate metrics")
+		packageLogger.Fatal().Err(err).Msg("failed to registrate metrics")
 	}
 
 	return ctx
@@ -155,7 +153,7 @@ func initProviders(ctx context.Context) context.Context {
 
 func initDomains(ctx context.Context) context.Context {
 	var err error
-	log := logger.GetPackageLogger(ctx, empty{})
+	packageLogger := logger.GetPackageLogger(ctx, Empty{})
 
 	// Initilize domains
 	if ctx, err = testv1.Registrate(ctx, &testv1.Config{
@@ -166,22 +164,22 @@ func initDomains(ctx context.Context) context.Context {
 		PrivateHTTP: cfg.PrivateHTTP,
 		Version:     "1",
 	}); err != nil {
-		log.Fatal().Err(err).Msg("failed to create domain testv1")
+		packageLogger.Fatal().Err(err).Msg("failed to create domain testv1")
 	}
 
 	// Subscribe domain to rabbitmq
 	rabbimqEnity, err := rabbitmq.GetEnityTypeCast(ctx, cfg.MsgsName)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get msgs enity")
+		packageLogger.Fatal().Err(err).Msg("failed to get msgs enity")
 	}
 
 	testV1, err := testv1.Get(ctx)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get testv1 domain")
+		packageLogger.Fatal().Err(err).Msg("failed to get testv1 domain")
 	}
 
 	if err = rabbimqEnity.Subscribe(testV1.GetMess()); err != nil {
-		log.Fatal().Err(err).Msg("failed to subscribe messaging")
+		packageLogger.Fatal().Err(err).Msg("failed to subscribe messaging")
 	}
 
 	return ctx
@@ -189,14 +187,14 @@ func initDomains(ctx context.Context) context.Context {
 
 func serveHandler(_ *cobra.Command, _ []string) {
 	ctx := initService()
-	log := logger.GetPackageLogger(ctx, empty{})
+	packageLogger := logger.GetPackageLogger(ctx, Empty{})
 
 	ctx = initProviders(ctx)
 	ctx = initDomains(ctx)
 
 	// Start connect
 	if err := app.Start(ctx); err != nil {
-		log.Fatal().Err(err).Msg("failed to start providers")
+		packageLogger.Fatal().Err(err).Msg("failed to start service")
 	}
 
 	app.Loop(ctx)

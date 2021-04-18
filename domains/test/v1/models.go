@@ -10,6 +10,9 @@ import (
 	"github.com/soldatov-s/go-garage/x/sql"
 )
 
+// Private type, used for configure logger
+type Empty struct{}
+
 type Enity struct {
 	ID   int            `json:"id" db:"id"`
 	Code string         `json:"code" db:"code"`

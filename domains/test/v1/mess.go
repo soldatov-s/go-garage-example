@@ -1,9 +1,9 @@
 package test
 
 import (
+	"context"
 	"encoding/json"
 
-	"github.com/rs/zerolog"
 	"github.com/soldatov-s/go-garage/providers/msgs/rabbitmq"
 	"github.com/soldatov-s/go-garage/utils"
 )
@@ -12,21 +12,23 @@ type Messenger interface {
 	rabbitmq.SubscribeOptions
 }
 
-type Mess struct {
-	repo  Repository
-	cache Cacher
-	msgs  *rabbitmq.Enity
-	log   *zerolog.Logger
+type MessDeps struct {
+	Repository RepositoryGateway
+	Cache      Cacher
+	Msgs       *rabbitmq.Enity
 }
 
-var _ Messenger = new(Mess)
+type Mess struct {
+	repo  RepositoryGateway
+	cache Cacher
+	msgs  *rabbitmq.Enity
+}
 
-func NewMess(log *zerolog.Logger, msgs *rabbitmq.Enity, repo Repository, cache Cacher) *Mess {
+func NewMess(deps *MessDeps) *Mess {
 	return &Mess{
-		repo:  repo,
-		cache: cache,
-		log:   log,
-		msgs:  msgs,
+		repo:  deps.Repository,
+		cache: deps.Cache,
+		msgs:  deps.Msgs,
 	}
 }
 
@@ -36,14 +38,15 @@ func (m *Mess) Consume(data []byte) error {
 		return err
 	}
 
+	ctx := context.Background()
+
 	// Check that code not exist in cache
 	var streamState string
-	if err := m.cache.Get(request.Code, &streamState); err == nil {
-		m.log.Debug().Msgf("find code %s in cache", request.Code)
+	if err := m.cache.Get(ctx, request.Code, &streamState); err == nil {
 		return nil
 	}
 
-	test, err := m.repo.GetByCode(request.Code)
+	test, err := m.repo.GetByCode(ctx, request.Code)
 	if err != nil {
 		return err
 	}

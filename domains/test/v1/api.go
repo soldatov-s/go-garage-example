@@ -5,54 +5,41 @@ import (
 	"reflect"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 	"github.com/soldatov-s/go-garage/providers/httpsrv"
 	"github.com/soldatov-s/go-garage/providers/httpsrv/echo"
 )
 
-type APIInterface interface {
-	SetRoutes(log *zerolog.Logger, publicHTTP, privateHTTP *echo.Enity, version string) error
+type HandlerGateway interface {
+	SetRoutes(publicGroup, privateGroup *echo.Group)
 	PostToCacheHandler(ec echo.Context) error
 	GetHandler(ec echo.Context) error
 	PostHandler(ec echo.Context) error
 	DeleteHandler(ec echo.Context) error
 }
 
-type API struct {
-	repo  Repository
-	cache Cacher
+type HandlerDeps struct {
+	Repository RepositoryGateway
+	Cache      Cacher
 }
 
-var _ APIInterface = new(API)
-
-func NewAPI(repo Repository, cache Cacher) *API {
-	return &API{repo: repo, cache: cache}
+type Handler struct {
+	repository RepositoryGateway
+	cache      Cacher
 }
 
-func (a *API) SetRoutes(log *zerolog.Logger, publicHTTP, privateHTTP *echo.Enity, version string) error {
-	publicV1, err := publicHTTP.GetAPIVersionGroup(version)
-	if err != nil {
-		return errors.Wrap(err, "get version group")
-	}
-
-	publicV1.Group.Use(echo.HydrationLogger(log))
-	publicV1.Group.POST("/test/:id", echo.Handler(a.PostToCacheHandler))
-
-	privateV1, err := privateHTTP.GetAPIVersionGroup(version)
-	if err != nil {
-		return errors.Wrap(err, "get version group")
-	}
-
-	privateV1.Group.Use(echo.HydrationLogger(log))
-	privateV1.Group.GET("/test/:id", echo.Handler(a.GetHandler))
-	privateV1.Group.POST("/test", echo.Handler(a.PostHandler))
-	privateV1.Group.DELETE("/test/:id", echo.Handler(a.DeleteHandler))
-
-	return nil
+func NewHandler(deps *HandlerDeps) *Handler {
+	return &Handler{repository: deps.Repository, cache: deps.Cache}
 }
 
-func (a *API) PostToCacheHandler(ec echo.Context) error {
-	// Swagger
+func (a *Handler) SetRoutes(publicGroup, privateGroup *echo.Group) {
+	publicGroup.POST("/test/:id", echo.Handler(a.PostToCacheHandler))
+
+	privateGroup.GET("/test/:id", echo.Handler(a.GetHandler))
+	privateGroup.POST("/test", echo.Handler(a.PostHandler))
+	privateGroup.DELETE("/test/:id", echo.Handler(a.DeleteHandler))
+}
+
+func (a *Handler) PostToCacheHandler(ec echo.Context) error {
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
 			SetProduces("application/json").
@@ -67,39 +54,39 @@ func (a *API) PostToCacheHandler(ec echo.Context) error {
 		return nil
 	}
 
-	log := ec.GetLog()
+	ctx := ec.Request().Context()
+	logger := ec.GetLog()
 
 	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
+		logger.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
 		return ec.BadRequest(errors.Wrap(err, "failed to convert id"))
 	}
 
-	data, err := a.repo.GetByID(ID)
+	data, err := a.repository.GetByID(ctx, ID)
 	if err != nil {
-		log.Err(err).Msgf("failed to get data by id %q", ec.Param("id"))
+		logger.Err(err).Msgf("failed to get data by id %q", ec.Param("id"))
 		return ec.BadRequest(errors.Wrap(err, "failed to get data by id"))
 	}
 
-	if err := a.cache.Set(data.Code, data); err != nil {
-		log.Err(err).Msgf("failed to save to cache, data %+v", data)
+	if err := a.cache.Set(ctx, data.Code, data); err != nil {
+		logger.Err(err).Msgf("failed to save to cache, data %+v", data)
 		return ec.InternalServerError(errors.Wrap(err, "failed to save to cache"))
 	}
 
-	if err := a.cache.Ping(); err != nil {
-		log.Debug().Msgf("ping redis %s", err)
+	if err := a.cache.Ping(ctx); err != nil {
+		logger.Debug().Msgf("ping redis %s", err)
 	}
 
 	if err := ec.OkResult(); err != nil {
-		log.Err(err).Msg("failed to write answer")
+		logger.Err(err).Msg("failed to write answer")
 		return ec.InternalServerError(errors.Wrap(err, "failed to write answer"))
 	}
 
 	return nil
 }
 
-func (a *API) GetHandler(ec echo.Context) error {
-	// Swagger
+func (a *Handler) GetHandler(ec echo.Context) error {
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
 			SetProduces("application/json").
@@ -113,30 +100,30 @@ func (a *API) GetHandler(ec echo.Context) error {
 		return nil
 	}
 
-	log := ec.GetLog()
+	ctx := ec.Request().Context()
+	logger := ec.GetLog()
 
 	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
+		logger.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
 		return ec.BadRequest(errors.Wrap(err, "failed to convert id"))
 	}
 
-	data, err := a.repo.GetByID(ID)
+	data, err := a.repository.GetByID(ctx, ID)
 	if err != nil {
-		log.Err(err).Msgf("failed to get data by id %q", ec.Param("id"))
+		logger.Err(err).Msgf("failed to get data by id %q", ec.Param("id"))
 		return ec.BadRequest(errors.Wrap(err, "failed to get data"))
 	}
 
 	if err := ec.OK(DataResult{Body: data}); err != nil {
-		log.Err(err).Msg("failed to write answer")
+		logger.Err(err).Msg("failed to write answer")
 		return ec.InternalServerError(errors.Wrap(err, "failed to write answer"))
 	}
 
 	return nil
 }
 
-func (a *API) PostHandler(ec echo.Context) error {
-	// Swagger
+func (a *Handler) PostHandler(ec echo.Context) error {
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
 			SetProduces("application/json").
@@ -150,27 +137,26 @@ func (a *API) PostHandler(ec echo.Context) error {
 		return nil
 	}
 
-	// Main code of handler
-	log := ec.GetLog()
+	ctx := ec.Request().Context()
+	logger := ec.GetLog()
 
 	request := &Enity{}
 
 	if err := ec.Bind(request); err != nil {
-		log.Err(err).Msg("failed to bind body")
+		logger.Err(err).Msg("failed to bind body")
 		return ec.BadRequest(errors.Wrap(err, "failed to bind body"))
 	}
 
-	data, err := a.repo.CreateTest(request)
+	data, err := a.repository.CreateTest(ctx, request)
 	if err != nil {
-		log.Err(err).Msgf("failed create data %+v", &request)
+		logger.Err(err).Msgf("failed create data %+v", &request)
 		return ec.CreateFailed(errors.Wrap(err, "failed create data"))
 	}
 
 	return ec.OK(DataResult{Body: data})
 }
 
-func (a *API) DeleteHandler(ec echo.Context) error {
-	// Swagger
+func (a *Handler) DeleteHandler(ec echo.Context) error {
 	if ec.IsBuildingSwagger() {
 		ec.AddToSwagger().
 			SetProduces("application/json").
@@ -185,31 +171,32 @@ func (a *API) DeleteHandler(ec echo.Context) error {
 		return nil
 	}
 
-	log := ec.GetLog()
+	ctx := ec.Request().Context()
+	logger := ec.GetLog()
 
 	ID, err := ec.GetInt64Param("id")
 	if err != nil {
-		log.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
+		logger.Err(err).Msgf("failed to convert id %q", ec.Param("id"))
 		return ec.BadRequest(errors.Wrap(err, "failed to convert id"))
 	}
 
 	hard := ec.QueryParam("hard")
 	switch hard {
 	case "true":
-		err = a.repo.HardDeleteByID(ID)
+		err = a.repository.HardDeleteByID(ctx, ID)
 	case "false":
-		err = a.repo.SoftDeleteByID(ID)
+		err = a.repository.SoftDeleteByID(ctx, ID)
 	default:
 		err = errors.New("unknown value for hard parameter")
 	}
 
 	if err != nil {
-		log.Err(err).Msgf("failed to delete by id %q", ec.Param("id"))
+		logger.Err(err).Msgf("failed to delete by id %q", ec.Param("id"))
 		return ec.BadRequest(errors.Wrap(err, "failed to delete"))
 	}
 
 	if err := ec.OkResult(); err != nil {
-		log.Err(err).Msg("failed to write answer")
+		logger.Err(err).Msg("failed to write answer")
 		return ec.InternalServerError(errors.Wrap(err, "failed to write answer"))
 	}
 
