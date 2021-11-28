@@ -1,0 +1,89 @@
+linters-settings:
+  errcheck:
+    check-type-assertions: false
+    check-blank: true
+  govet:
+    check-shadowing: true
+    settings:
+      printf:
+        funcs:
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+  exhaustive:
+    default-signifies-exhaustive: true
+  golint:
+    min-confidence: 0.8
+  gofmt:
+    simplify: true
+  gocyclo:
+    min-complexity: 11
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  depguard:
+    list-type: blacklist
+    include-go-root: false
+    packages:
+      - github.com/davecgh/go-spew/spew
+      - github.com/sirupsen/logrus
+  misspell:
+    locale: US
+  lll:
+    line-length: 130
+    tab-width: 2
+  unused:
+    check-exported: false
+  unparam:
+    algo: cha
+    check-exported: false
+  nakedret:
+    max-func-lines: 100
+  prealloc:
+    simple: true
+    range-loops: false
+    for-loops: false
+  goimports:
+    local-prefixes: github.com/golangci/golangci-lint
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - wrapperFunc
+linters:
+  enable-all: true
+  disable:
+    - errname
+    - golint
+    - tagliatelle
+    - wsl
+    - gochecknoglobals
+    - gomnd
+    - godot
+    - nlreturn
+    - gci
+    - exhaustivestruct
+    - paralleltest
+    - wrapcheck
+    - cyclop
+    - gomoddirectives
+    - maligned
+    - interfacer
+    - scopelint
+issues:
+  exclude:
+    - Function 'Run' has too many statements
+    - Function 'Run' is too long
+    - cyclomatic complexity [0-9]+ of func `Run` is high
+  exclude-rules:
+    - linters:
+        - funlen
+      source: "^func Test"
+  exclude-use-default: true
+  max-per-linter: 0
+  max-same: 0

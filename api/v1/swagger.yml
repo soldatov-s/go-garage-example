@@ -1,0 +1,224 @@
+openapi: 3.0.1
+info:
+  title: go-example private API v1
+  description: This is a documentation of go-example private API v1
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: API Support
+    url: https://test.test
+    email: support@test.test
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: ""
+servers:
+  - url: http://{ip}:{port}/api/v1
+    variables:
+      ip:
+        enum:
+          - "localhost"
+        default: "localhost"
+      port:
+        enum:
+          - "9100"
+        default: "9100"
+paths:
+  /test:
+    post:
+      summary: This handler create new data
+      description: Create Data Handler
+      operationId: PostHandler
+      requestBody:
+        description: Data
+        content:
+          "*/*":
+            schema:
+              $ref: "#/components/schemas/Enity"
+        required: true
+      responses:
+        200:
+          description: Data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataResult"
+        400:
+          description: BAD REQUEST
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+        409:
+          description: CREATE DATA FAILED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+      x-codegen-request-body-name: data
+  /test/{id}:
+    get:
+      summary: This handler getting data for requested ID
+      description: Get data by ID
+      operationId: GetHandler
+      parameters:
+        - name: id
+          in: path
+          description: ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataResult"
+        400:
+          description: BAD REQUEST
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+        404:
+          description: NOT FOUND DATA
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+    delete:
+      summary: This handler deletes data for requested ID
+      description: Delete data by ID
+      operationId: DeleteHandler
+      parameters:
+        - name: id
+          in: path
+          description: ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: hard
+          in: query
+          description: Hard delete data, if equal true, delete hard
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultAnsw"
+        400:
+          description: BAD REQUEST
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+        404:
+          description: NOT FOUND DATA
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+    post:
+      summary: This handler put data to cache for requested ID
+      description: Put data to cache by ID
+      operationId: PostToCacheHandler
+      parameters:
+        - name: id
+          in: path
+          description: ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultAnsw"
+        400:
+          description: BAD REQUEST
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+        404:
+          description: NOT FOUND DATA
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+        500:
+          description: INTERNAL ERROR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorAnsw"
+components:
+  schemas:
+    Enity:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          x-oapi-codegen-extra-tags:
+            db: id
+        code:
+          type: string
+          x-oapi-codegen-extra-tags:
+            db: code
+        meta:
+          type: object
+          properties: {}
+          x-go-type: NullMeta
+          x-oapi-codegen-extra-tags:
+            db: meta
+        created_at:
+          type: string
+          format: date-time
+          x-go-type: NullTime
+          x-oapi-codegen-extra-tags:
+            db: created_at
+        updated_at:
+          type: string
+          format: date-time
+          x-go-type: NullTime
+          x-oapi-codegen-extra-tags:
+            db: updated_at
+        deleted_at:
+          type: string
+          format: date-time
+          x-go-type: NullTime
+          x-oapi-codegen-extra-tags:
+            db: deleted_at
+    ErrorAnsw:
+      type: object
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorAnswBody"
+    ErrorAnswBody:
+      type: object
+      properties:
+        code:
+          type: string
+        details:
+          type: string
+        statusCode:
+          type: integer
+    DataResult:
+      type: object
+      properties:
+        result:
+          $ref: "#/components/schemas/Enity"
+    ResultAnsw:
+      type: object
+      properties:
+        result:
+          type: string

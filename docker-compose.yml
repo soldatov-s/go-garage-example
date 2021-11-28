@@ -1,0 +1,48 @@
+version: "3.3"
+
+services:
+  rabbitmq:
+    image: "rabbitmq:3.8.5-management-alpine"
+    restart: always
+    ports:
+      - 15672:15672
+      - 5672:5672
+
+  postgres:
+    image: "postgres:12.3-alpine"
+    ports:
+      - "5432:5432"
+    env_file:
+      - variables.env
+    volumes:
+      - "postgres-storage:/var/lib/postgresql/data"
+
+  redis:
+    image: "redis:alpine3.12"
+    ports:
+      - "6379:6379"
+    env_file:
+      - variables.env
+
+  service:
+    container_name: ${APP_NAME}
+    build:
+      context: .
+      args:
+        - APP_NAME=${APP_NAME}
+        - PACKAGE=${PACKAGE}
+    image: ${REGISTRY}/${APP_NAME}
+    depends_on:
+      - postgres
+      - rabbitmq
+      - redis
+    env_file:
+      - variables.env
+    command: serve
+    ports:
+      - "9000:9000"
+      - "9100:9100"
+    restart: on-failure
+
+volumes:
+  postgres-storage:
