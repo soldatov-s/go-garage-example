@@ -13,13 +13,15 @@ else
 	endif
 endif
 
+APIDIR=./api
+
 BUILDTIME=$(shell TZ=UTC date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null)
 
 # PACKAGE name when build on gitlab
 PACKAGE=$(CI_SERVER_HOST)/$(CI_PROJECT_NAMESPACE)/$(CI_PROJECT_NAME)
 ifeq ($(PACKAGE),//)
 	# PACKAGE name when build local
-	PACKAGE=$(shell go mod vendor; go list -mod vendor 2>/dev/null)
+	PACKAGE=$(shell go list -mod vendor 2>/dev/null)
 endif
 
 ifneq ($(PACKAGE),)
@@ -122,6 +124,20 @@ docker-compose-up: docker-compose-build ## Build and run docker-compose
 docker-compose-clear: ## Clear docker-compose
 	@APP_NAME=${PROJECT_NAME} PACKAGE=${PACKAGE} REGISTRY=${IMAGE_REGISTRY} docker-compose rm -s -f -v
 	@APP_NAME=${PROJECT_NAME} PACKAGE=${PACKAGE} REGISTRY=${IMAGE_REGISTRY} docker-compose down -v
+
+.PHONY: gen-mocks
+gen-mocks: ## Run generate mocks
+	go generate ./...
+
+define gen_swagger_by_api
+	oapi-codegen -generate "types" -package "api$(2)" $(1)/swagger.yml -o > $(1)/types.gen.go; \
+	oapi-codegen -generate "server" -package "api$(2)" $(1)/swagger.yml -o > $(1)/server.gen.go; \
+	oapi-codegen -generate "spec" -package "api$(2)" $(1)/swagger.yml -o > $(1)/spec.gen.go
+endef
+
+.PHONY: gen-swagger
+gen-swagger: ## Run generate swagger
+	@for f in $(shell ls -d ${APIDIR}/*/); do echo swagger for $${f}; $(call gen_swagger_by_api,$$f,$$(basename $$f)); done
 
 help: ## Display this help screen
 	@grep -h -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; \

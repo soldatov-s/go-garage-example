@@ -31,7 +31,7 @@ paths:
       requestBody:
         description: Data
         content:
-          "*/*":
+          application/json:
             schema:
               $ref: "#/components/schemas/Enity"
         required: true

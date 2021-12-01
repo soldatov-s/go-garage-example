@@ -35,9 +35,15 @@ type ResultAnsw struct {
 	Result *string `json:"result,omitempty"`
 }
 
+// PostHandlerJSONBody defines parameters for PostHandler.
+type PostHandlerJSONBody Enity
+
 // DeleteHandlerParams defines parameters for DeleteHandler.
 type DeleteHandlerParams struct {
 	// Hard delete data, if equal true, delete hard
 	Hard *bool `json:"hard,omitempty"`
 }
+
+// PostHandlerJSONRequestBody defines body for PostHandler for application/json ContentType.
+type PostHandlerJSONRequestBody PostHandlerJSONBody
 
