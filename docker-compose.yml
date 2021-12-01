@@ -5,8 +5,8 @@ services:
     image: "rabbitmq:3.8.5-management-alpine"
     restart: always
     ports:
-      - 15672:15672
-      - 5672:5672
+      - "15672:15672"
+      - "5672:5672"
 
   postgres:
     image: "postgres:12.3-alpine"
@@ -45,4 +45,4 @@ services:
     restart: on-failure
 
 volumes:
-  postgres-storage:
+  postgres-storage: null
