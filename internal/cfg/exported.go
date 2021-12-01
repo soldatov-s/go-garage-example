@@ -72,7 +72,7 @@ func NewConfig() (*Config, error) {
 		},
 
 		Cache: &rediscache.Config{
-			KeyPrefix: "garage-test_",
+			KeyPrefix: "garage-test",
 			ClearTime: 30 * time.Second,
 		},
 	}
