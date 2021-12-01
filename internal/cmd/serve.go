@@ -31,7 +31,7 @@ func Run() error {
 	ctx = logger.Zerolog().WithContext(ctx)
 
 	meta := app.NewMeta(&app.MetaDeps{
-		Name:        name,
+		Name:        appName,
 		Builded:     builded,
 		Version:     version,
 		Hash:        hash,
@@ -39,10 +39,9 @@ func Run() error {
 	})
 
 	manager := app.NewManager(&app.ManagerDeps{
-		Meta:               meta,
-		StatsHTTPEnityName: "garage_echo",
-		Logger:             logger,
-		ErrorGroup:         runner,
+		Meta:       meta,
+		Logger:     logger,
+		ErrorGroup: runner,
 	})
 
 	pqEnity, err := pq.NewEnity(ctx, "garage_pq", config.DB)
@@ -97,6 +96,8 @@ func Run() error {
 	if errAdd := manager.Add(ctx, echoEnityPrivate); errAdd != nil {
 		return errors.Wrap(errAdd, "add enity to manager")
 	}
+
+	manager.SetStatsHTTPEnityName(echoEnityPrivate.GetFullName())
 
 	privateAPIV1, err := echoEnityPrivate.APIGroup(ctx, cfg.V1, meta.BuildInfo(), apiv1.GetSwagger)
 	if err != nil {

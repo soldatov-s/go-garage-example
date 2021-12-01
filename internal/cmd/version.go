@@ -6,6 +6,6 @@ var (
 	version     = defAppFieldValue
 	builded     = defAppFieldValue
 	hash        = defAppFieldValue
-	name        = defAppFieldValue
+	appName     = defAppFieldValue
 	description = ""
 )
