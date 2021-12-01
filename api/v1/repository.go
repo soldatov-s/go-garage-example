@@ -27,7 +27,7 @@ func NewRepository(deps *RepositoryDeps) (*Repository, error) {
 	}
 
 	ormDeps := &miniorm.ORMDeps{
-		Conn:             deps.Conn.GetConn(),
+		Conn:             deps.Conn.GetPConn(),
 		Target:           productionTestTable,
 		Data:             &Enity{},
 		PredefinedFields: miniorm.NewPredefinedFields(),
@@ -81,7 +81,7 @@ func (r *Repository) SoftDeleteByID(ctx context.Context, id int64) error {
 }
 
 func (r *Repository) CreateTest(ctx context.Context, data *Enity) (*Enity, error) {
-	data.CreatedAt.Timestamp()
+	data.CreatedAt = NewNullTime()
 	data.UpdatedAt = data.CreatedAt
 
 	if err := r.orm.InsertInto(ctx, data, data); err != nil {
