@@ -44,6 +44,7 @@ func Run() error {
 		ErrorGroup: runner,
 	})
 
+	// Create connection to PostgreSQL
 	pqEnity, err := pq.NewEnity(ctx, "garage_pq", config.DB)
 	if err != nil {
 		return errors.Wrap(err, "pq new enity")
@@ -53,37 +54,42 @@ func Run() error {
 		return errors.Wrap(errAdd, "add enity to manager")
 	}
 
+	// Create connection to Redis
 	redisEnity, err := redis.NewEnity(ctx, "garage_redis", config.Redis)
 	if err != nil {
 		return errors.Wrap(err, "redis new enity")
+	}
+
+	// Create cache in redis
+	cacheEnity, err := redisEnity.AddCache(ctx, config.Cache)
+	if err != nil {
+		return errors.Wrap(err, "new cache")
 	}
 
 	if errAdd := manager.Add(ctx, redisEnity); errAdd != nil {
 		return errors.Wrap(errAdd, "add enity to manager")
 	}
 
-	cacheEnity, err := redisEnity.AddCache(ctx, config.Cache)
-	if err != nil {
-		return errors.Wrap(err, "new cache")
-	}
-
+	// Create connection to RabbitMQ
 	rabbitmqEnity, err := rabbitmq.NewEnity(ctx, "garage_rabbitmq", config.RabbitMQ)
 	if err != nil {
 		return errors.Wrap(err, "rabbitmq new enity")
 	}
 
-	if errAdd := manager.Add(ctx, rabbitmqEnity); errAdd != nil {
-		return errors.Wrap(errAdd, "add enity to manager")
-	}
-
+	// Create consumer
 	consumerEnity, err := rabbitmqEnity.AddConsumer(ctx, config.Consumer)
 	if err != nil {
 		return errors.Wrap(err, "new consumer")
 	}
 
+	// Create publisher
 	publisherEnity, err := rabbitmqEnity.AddPublisher(ctx, config.Publisher)
 	if err != nil {
 		return errors.Wrap(err, "new publisher")
+	}
+
+	if errAdd := manager.Add(ctx, rabbitmqEnity); errAdd != nil {
+		return errors.Wrap(errAdd, "add enity to manager")
 	}
 
 	middlewares := echo.DefaultMiddlewares()
