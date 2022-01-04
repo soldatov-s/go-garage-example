@@ -148,6 +148,10 @@ func Run() error {
 		return errors.Wrap(err, "subscribe consumer")
 	}
 
+	if err := manager.OSSignalWaiter(ctx); err != nil {
+		return errors.Wrap(err, "os signal waiter")
+	}
+
 	if err := manager.Loop(ctx); err != nil {
 		return errors.Wrap(err, "application loop")
 	}
