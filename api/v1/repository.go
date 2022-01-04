@@ -27,7 +27,7 @@ func NewRepository(deps *RepositoryDeps) (*Repository, error) {
 	}
 
 	ormDeps := &miniorm.ORMDeps{
-		Conn:             deps.Conn.GetPConn(),
+		Conn:             deps.Conn,
 		Target:           productionTestTable,
 		Data:             &Enity{},
 		PredefinedFields: miniorm.NewPredefinedFields(),
