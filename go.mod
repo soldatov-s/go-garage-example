@@ -8,7 +8,7 @@ require (
 	github.com/labstack/echo/v4 v4.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.20.0
-	github.com/soldatov-s/go-garage v0.0.0-20211205170855-26c2bdd4c5dc
+	github.com/soldatov-s/go-garage v0.0.0-20220104180514-a8fe1190a8de
 	github.com/vrischmann/envconfig v1.2.0
-	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
