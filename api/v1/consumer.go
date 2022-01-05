@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	rabbitmqpub "github.com/soldatov-s/go-garage/providers/rabbitmq/publisher"
+	rediscache "github.com/soldatov-s/go-garage/providers/redis/cache"
 	"github.com/soldatov-s/go-garage/x/timex"
 )
 
@@ -47,6 +48,16 @@ func (m *Consumer) Consume(ctx context.Context, data []byte) error {
 	// Check that code not exist in cache
 	var streamState string
 	if err := m.cache.Get(ctx, request.Code, &streamState); err == nil {
+		return nil
+	}
+
+	if err := m.cache.Get(ctx, request.Code, &streamState); err != nil {
+		switch {
+		case errors.Is(err, rediscache.ErrNotFoundInCache):
+		default:
+			return errors.Wrap(err, "get from cache")
+		}
+	} else {
 		return nil
 	}
 
