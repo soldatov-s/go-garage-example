@@ -23,4 +23,20 @@ Prometheus metrics http://localhost:9100/metrics
 Alive http://localhost:9100/health/alive  
 Ready http://localhost:9100/health/ready  
 
-You can test sending messages to rabbitmq and consuming messages from it and caching data in redis
+You can test sending messages to rabbitmq and consuming messages from it and caching data in redis.
+For testing rabbitmq:
+- create record
+
+```go
+curl -X 'POST' \
+  'http://localhost:9100/api/v1/test' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "code": "test",
+  "id": 1
+}'
+```
+
+- post message {"code":"test","send_at":1641372157} with route key TEST_EVENTS to Exchange: test.events.dev via rabbitMQ WebUI
+- watch message at Exchange: testout.events.dev
