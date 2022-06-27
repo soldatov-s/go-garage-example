@@ -77,13 +77,13 @@ func Run() error {
 	}
 
 	// Create consumer
-	consumerEnity, err := rabbitmqEnity.AddConsumer(ctx, config.Consumer)
+	consumerEnity, err := rabbitmqEnity.AddConsumer(ctx, config.Consumer, runner)
 	if err != nil {
 		return errors.Wrap(err, "new consumer")
 	}
 
 	// Create publisher
-	publisherEnity, err := rabbitmqEnity.AddPublisher(ctx, config.Publisher)
+	publisherEnity, err := rabbitmqEnity.AddPublisher(ctx, config.Publisher, runner)
 	if err != nil {
 		return errors.Wrap(err, "new publisher")
 	}

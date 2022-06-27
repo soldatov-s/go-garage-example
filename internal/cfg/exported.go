@@ -9,6 +9,7 @@ import (
 	"github.com/soldatov-s/go-garage/providers/pq"
 	"github.com/soldatov-s/go-garage/providers/rabbitmq"
 	rabbitmqconsum "github.com/soldatov-s/go-garage/providers/rabbitmq/consumer"
+	rabbitmqpool "github.com/soldatov-s/go-garage/providers/rabbitmq/pool"
 	rabbitmqpub "github.com/soldatov-s/go-garage/providers/rabbitmq/publisher"
 	"github.com/soldatov-s/go-garage/providers/redis"
 	rediscache "github.com/soldatov-s/go-garage/providers/redis/cache"
@@ -52,7 +53,17 @@ func NewConfig() (*Config, error) {
 			Address: "0.0.0.0:9100",
 		},
 		RabbitMQ: &rabbitmq.Config{
-			DSN: "amqp://guest:guest@rabbitmq:5672",
+			PoolConfig: &rabbitmqpool.Config{
+				DSN:                    "amqp://guest:guest@rabbitmq:5672",
+				MaxOpenChannelsPerConn: 5,
+				MaxIdleChannelsPerConn: 5,
+				ChannelMaxLifetime:     15 * time.Second,
+				ChannelMaxIdleTime:     15 * time.Second,
+				MaxOpenConns:           5,
+				MaxIdleConns:           5,
+				ConnMaxLifetime:        15 * time.Second,
+				ConnMaxIdleTime:        15 * time.Second,
+			},
 		},
 
 		Consumer: &rabbitmqconsum.Config{
